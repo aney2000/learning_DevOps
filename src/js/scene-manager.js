@@ -145,35 +145,6 @@ const DungeonWorld = (() => {
     });
   }
 
-  /* ── CEILING ────────────────────────────────────────────────────────────── */
-  function buildCeiling() {
-    // Dark stone ceiling slab
-    const ceilMat = new THREE.MeshLambertMaterial({ color: 0x120f0c });
-    const ceil    = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_HALF * 2, ROOM_HALF * 2), ceilMat);
-    ceil.rotation.x = Math.PI / 2;
-    ceil.position.y = WALL_H;
-    _scene.add(ceil);
-
-    // Wooden ceiling beams
-    const beamMat = M.wood();
-    const beamGeo = new THREE.BoxGeometry(0.35, 0.3, ROOM_HALF * 2);
-    const beamPositions = [-6, -3, 0, 3, 6];
-    beamPositions.forEach(x => {
-      const beam = new THREE.Mesh(beamGeo, beamMat);
-      beam.position.set(x, WALL_H - 0.15, 0);
-      beam.castShadow = true;
-      _scene.add(beam);
-    });
-
-    // Cross-beams
-    const crossGeo = new THREE.BoxGeometry(ROOM_HALF * 2, 0.25, 0.3);
-    [-5, 0, 5].forEach(z => {
-      const cb = new THREE.Mesh(crossGeo, beamMat);
-      cb.position.set(0, WALL_H - 0.12, z);
-      _scene.add(cb);
-    });
-  }
-
   /* ── CORNER PILLARS ─────────────────────────────────────────────────────── */
   function buildPillars() {
     const pillarMat = M.stone();
@@ -251,41 +222,6 @@ const DungeonWorld = (() => {
       _sconceLights.push({ light, baseIntensity: 0.9, phase: Math.random() * Math.PI * 2 });
     });
   }
-
-  /* ── CHAINS ─────────────────────────────────────────────────────────────── */
-  function buildChains() {
-    const chainPositions = [[-4, WALL_H], [4, WALL_H], [0, WALL_H], [-7, WALL_H], [7, WALL_H]];
-    chainPositions.forEach(([x, topY]) => {
-      const z = (Math.random() - 0.5) * 14;
-      const linkCount = 6 + Math.floor(Math.random() * 6);
-      for (let i = 0; i < linkCount; i++) {
-        const geo   = new THREE.TorusGeometry(0.07, 0.025, 4, 8);
-        const link  = new THREE.Mesh(geo, M.chainLink());
-        link.position.set(x, topY - i * 0.16, z);
-        link.rotation.x = (i % 2 === 0) ? Math.PI / 2 : 0;
-        link.castShadow = true;
-        _scene.add(link);
-      }
-    });
-  }
-
-  /* ── COBWEBS ────────────────────────────────────────────────────────────── */
-  function buildCobwebs() {
-    const corners = [
-      [-ROOM_HALF + 0.5, WALL_H - 0.2, -ROOM_HALF + 0.5],
-      [ ROOM_HALF - 0.5, WALL_H - 0.2, -ROOM_HALF + 0.5],
-      [-ROOM_HALF + 0.5, WALL_H - 0.2,  ROOM_HALF - 0.5],
-      [ ROOM_HALF - 0.5, WALL_H - 0.2,  ROOM_HALF - 0.5],
-    ];
-    corners.forEach(([x, y, z]) => {
-      const geo = new THREE.PlaneGeometry(1.2, 1.2, 6, 6);
-      const web = new THREE.Mesh(geo, M.cobweb());
-      web.position.set(x, y, z);
-      web.rotation.x = -Math.PI / 4;
-      _scene.add(web);
-    });
-  }
-
   /* ── OBSTACLES ──────────────────────────────────────────────────────────── */
   function buildObstacles() {
     const defs = [
@@ -550,11 +486,8 @@ const DungeonWorld = (() => {
     buildLighting();
     buildFloor();
     buildWalls();
-    buildCeiling();
     buildPillars();
     buildSconces();
-    buildChains();
-    buildCobwebs();
     buildObstacles();
     buildLantern(playerGroup);
     initDrips();
