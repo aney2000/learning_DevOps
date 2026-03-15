@@ -1,0 +1,68 @@
+name: Dungeon CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [master]
+
+jobs:
+
+  # ── JOB 1: Validare cod ──────────────────────────────────────────────────────
+  # runs-on = masina virtuala GitHub (obligatoriu)
+  # container = unde ruleaza efectiv pasii — Alpine e ~180MB vs ~2GB Ubuntu
+  validate:
+    runs-on: ubuntu-latest
+    container: node:20-alpine
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install htmlhint
+        run: npm install -g htmlhint
+
+      - name: Lint HTML
+        run: htmlhint src/game.html
+
+      - name: Check structure
+        run: |
+          [ ! -f src/game.html ] && echo "ERROR: game.html missing" && exit 1
+          [ ! -d src/css ]       && echo "ERROR: css/ missing"      && exit 1
+          [ ! -d src/js ]        && echo "ERROR: js/ missing"       && exit 1
+          echo "OK: structure valid"
+
+      - name: Check for leftover console.log
+        run: |
+          if grep -rn "console.log" src/js/ 2>/dev/null; then
+            echo "WARNING: console.log found"
+          else
+            echo "OK: no console.log"
+          fi
+
+  # ── JOB 2: Docker build & smoke test ────────────────────────────────────────
+  # Ruleaza doar daca Job 1 a trecut
+  # Ubuntu necesar aici — Docker-in-Docker e inutil de complicat
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t dungeon-game:test .
+
+      - name: Run container and smoke test
+        run: |
+          docker run -d -p 8080:80 --name test-container dungeon-game:test
+          sleep 2
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/game.html)
+          echo "HTTP status: $STATUS"
+
+          docker stop test-container && docker rm test-container
+
+          [ "$STATUS" != "200" ] && echo "ERROR: got $STATUS" && exit 1
+          echo "OK: container serves game.html correctly"
