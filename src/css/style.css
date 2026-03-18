@@ -123,6 +123,39 @@ body {
 
 #three-canvas { width: 100%; height: 100%; display: block; }
 
+/* Level indicator (new) */
+#level-indicator {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: rgba(16, 14, 10, 0.85);
+  border: 2px solid #d4a820;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #b090ff;
+  font-size: 0.8rem;
+  font-family: 'Courier New', 'Crimson Pro', monospace;
+  z-index: 15;
+  text-align: center;
+  letter-spacing: 0.15em;
+  box-shadow: 0 0 12px rgba(212, 168, 32, 0.2);
+}
+
+#level-phase {
+  font-weight: 600;
+  color: #c8a96e;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.level-type {
+  color: #ffaa00;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
 /* Top bar */
 #topbar {
   position: fixed; top: 0; left: 0; right: 0;
@@ -195,6 +228,8 @@ body {
   background: #0d0b08;
   min-width: 400px;
   position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .stats-box::before, .stats-box::after {
@@ -266,3 +301,19 @@ body {
   transition: all 0.25s;
 }
 .stats-play-again:hover { border-color: #c8a96e; color: #c8a96e; }
+
+/* Level completion flash effect */
+@keyframes level-complete-flash {
+  0% {
+    background: rgba(255, 200, 50, 0.6);
+    opacity: 1;
+  }
+  100% {
+    background: rgba(255, 200, 50, 0);
+    opacity: 0;
+  }
+}
+
+.level-flash {
+  animation: level-complete-flash 0.8s ease-out;
+}

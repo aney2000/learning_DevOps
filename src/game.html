@@ -3,8 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dungeon</title>
+  <title>Dungeon - Multi-Level Adventure</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Level counter styles */
+    #level-indicator {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #d4a820;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #b090ff;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      z-index: 15;
+      text-align: center;
+    }
+
+    #level-indicator .level-type {
+      color: #ffaa00;
+      font-weight: bold;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    #topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
 </head>
 <body>
 
@@ -23,12 +53,16 @@
   <!-- ── GAME ── -->
   <div id="game-screen">
     <canvas id="three-canvas"></canvas>
+    <div id="level-indicator">
+      <div id="level-phase">Phase 1</div>
+      <div class="level-type" id="level-type">Collection</div>
+    </div>
     <div id="topbar">
       <span id="topbar-title">Dungeon · Phase I</span>
       <button id="end-btn">End Run</button>
     </div>
     <div id="timer-display">00:00</div>
-    <div id="controls-hint">WASD · Arrows — move<br>Space — jump</div>
+    <div id="controls-hint">WASD · Arrows — move<br>Space — jump<br>F — cast spell</div>
   </div>
 
   <!-- ── STATS ── -->
@@ -40,12 +74,20 @@
         <span class="stat-value" id="s-name" style="font-size:1.3rem">—</span>
       </div>
       <div class="stat-row">
+        <span class="stat-label">Levels Completed</span>
+        <span class="stat-value" id="s-levels">—</span>
+      </div>
+      <div class="stat-row">
         <span class="stat-label">Time in Dungeon</span>
         <span class="stat-value" id="s-time">—</span>
       </div>
       <div class="stat-row">
         <span class="stat-label">Steps Taken</span>
         <span class="stat-value" id="s-steps">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Spells Cast</span>
+        <span class="stat-value" id="s-spells">—</span>
       </div>
       <div class="stat-row">
         <span class="stat-label">Distance Walked</span>
