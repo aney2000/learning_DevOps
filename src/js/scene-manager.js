@@ -608,6 +608,21 @@ const DungeonWorld = (() => {
     _lanternAmbient = null;
   }
 
-  return { build, update, dispose };
+  function getGroundLevelAt(px, pz) {
+    let groundLevel = 0;
+    _obstacles.forEach(ob => {
+      const ox = ob.mesh.position ? ob.mesh.position.x : ob.x;
+      const oz = ob.mesh.position ? ob.mesh.position.z : ob.z;
+      const dx = Math.abs(px - ox);
+      const dz = Math.abs(pz - oz);
+      if (dx < ob.hw + 0.25 && dz < ob.hd + 0.25) {
+        const top = (ob.mesh.position ? ob.mesh.position.y : 0) + ob.hh * 2;
+        if (top > groundLevel) groundLevel = top;
+      }
+    });
+    return groundLevel;
+  }
+
+  return { build, update, dispose, getGroundLevelAt };
 
 })();
