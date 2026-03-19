@@ -109,8 +109,8 @@ const DungeonWorld = (() => {
     const colsNeeded = Math.ceil(ROOM_HALF * 2 / brickW);
 
     const wallDefs = [
-      { axis: 'z', side: -1 },  // north
-      { axis: 'z', side:  1 },  // south
+      { axis: 'z', side: -1 },  // north (REMOVED - open front for exit)
+      // { axis: 'z', side:  1 },  // south
       { axis: 'x', side: -1 },  // west
       { axis: 'x', side:  1 },  // east
     ];
