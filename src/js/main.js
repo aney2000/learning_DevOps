@@ -18,6 +18,14 @@ const loginScr  = document.getElementById('login-screen');
 const gameScr   = document.getElementById('game-screen');
 const statsScr  = document.getElementById('stats-screen');
 
+// ─── POTION SYSTEM STATE ─────────────────────────────────────────────────────
+let activePotion = null; // 'invert_move', 'invert_vertical', or 'swap_spell'
+const POTION_TYPES = [
+  { id: 'invert_move', name: 'Potion of Mirroring', desc: 'Swaps Left & Right keys' },
+  { id: 'invert_vertical', name: 'Potion of Vertigo', desc: 'Swaps Up & Down keys' },
+  { id: 'swap_spell', name: 'Potion of Chaos', desc: 'F fires bolt, Space is Jump' } 
+];
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 nameInput.addEventListener('input', () => {
   enterBtn.disabled = nameInput.value.trim().length < 2;
@@ -70,6 +78,7 @@ const PROGRESSION = {
     { type: 'slayer', enemiesToKill: 7, roomSize: 14, enemyDifficulty: 'hard' },
     // Level 8: 8 enemies
     { type: 'slayer', enemiesToKill: 8, roomSize: 15, enemyDifficulty: 'hard' },
+    
   ]
 };
 
@@ -81,6 +90,23 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyF' && scene) fireMagicBolt();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+
+  // Determine which key is allowed to fire based on the potion
+  const canFireWithF = (activePotion !== 'swap_spell' && e.code === 'KeyF');
+  const canFireWithSpace = (activePotion === 'swap_spell' && e.code === 'Space');
+
+  if (canFireWithF || canFireWithSpace) {
+    if (scene) fireMagicBolt();
+  }
+
+  // Prevent browser scrolling for both possible jump keys
+  if (e.code === 'Space' || e.code === 'KeyF') {
+    e.preventDefault();
+  }
+});
 
 // ─── THREE.JS CORE ────────────────────────────────────────────────────────────
 let renderer, scene, camera, playerGroup;
@@ -553,12 +579,33 @@ function gameLoop(ts) {
 
   if (!scene || !playerGroup) return;
 
-  // Input & movement
+  // 1. Get raw input
+  let moveUp    = keys['KeyW'] || keys['ArrowUp'];
+  let moveDown  = keys['KeyS'] || keys['ArrowDown'];
+  let moveLeft  = keys['KeyA'] || keys['ArrowLeft'];
+  let moveRight = keys['KeyD'] || keys['ArrowRight'];
+
+  // 2. Apply Potion Influences
+  if (activePotion === 'invert_move') {
+      // Swap Left and Right
+      const temp = moveLeft;
+      moveLeft = moveRight;
+      moveRight = temp;
+  }
+
+  if (activePotion === 'invert_vertical') {
+    // Swap Up and Down
+    const temp = moveUp;
+    moveUp = moveDown;
+    moveDown = temp;
+  }
+
+  // 3. Process the (potentially swapped) movement
   const input = new THREE.Vector3(0, 0, 0);
-  if (keys['KeyW'] || keys['ArrowUp']) input.z -= 1;
-  if (keys['KeyS'] || keys['ArrowDown']) input.z += 1;
-  if (keys['KeyA'] || keys['ArrowLeft']) input.x -= 1;
-  if (keys['KeyD'] || keys['ArrowRight']) input.x += 1;
+  if (moveUp)    input.z -= 1;
+  if (moveDown)  input.z += 1;
+  if (moveLeft)  input.x -= 1;
+  if (moveRight) input.x += 1;
   
   if (input.length() > 0) {
     input.normalize();
@@ -719,6 +766,47 @@ function spawnLevelDoor() {
   _levelState.doorMesh = doorGroup;
   animatePortal();
 }
+function showPotionSelection() {
+  const overlay = document.createElement('div');
+  overlay.id = 'potion-overlay';
+  overlay.style = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10, 5, 20, 0.95); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 1000;
+    font-family: 'Crimson Pro', serif; color: #fff;
+  `;
+
+  overlay.innerHTML = `
+    <h1 style="color: #d4a820; text-shadow: 0 0 20px rgba(212,168,32,0.5);">Drink Your Fate</h1>
+    <p style="margin-bottom: 30px; font-style: italic;">The effects are unknown until tasted...</p>
+    <div id="potion-container" style="display:flex; gap:30px;"></div>
+  `;
+  
+  const container = overlay.querySelector('#potion-container');
+
+  // Shuffle and show buttons without descriptions
+  [...POTION_TYPES].sort(() => Math.random() - 0.5).forEach(potion => {
+    const btn = document.createElement('button');
+    btn.style = `
+      padding: 40px 20px; background: #1a1060; border: 2px solid #d4a820;
+      color: gold; cursor: pointer; width: 180px; transition: 0.3s;
+      border-radius: 10px; font-size: 1.2rem; font-weight: bold;
+    `;
+    btn.innerHTML = potion.name;
+    
+    btn.onmouseover = () => btn.style.background = '#2a1a80';
+    btn.onmouseout = () => btn.style.background = '#1a1060';
+    
+    btn.onclick = () => {
+      activePotion = potion.id;
+      overlay.remove();
+      generateLevel(); 
+    };
+    container.appendChild(btn);
+  });
+
+  document.body.appendChild(overlay);
+}
 function checkDoorCollision(playerPos) {
   if (!_levelState.doorMesh) return;
   
@@ -826,11 +914,13 @@ function completeLevel() {
     _levelState.doorMesh = null;
   }
 
+  // Inside completeLevel()...
   setTimeout(() => {
-    flash.remove();
-    messageContainer.remove();
-    // Start next level
-    generateLevel();
+      flash.remove();
+      messageContainer.remove();
+      
+      // Instead of generateLevel(), show the choice!
+      showPotionSelection(); 
   }, 1200);
 }
 
