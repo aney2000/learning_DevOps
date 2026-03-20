@@ -18,6 +18,14 @@ const loginScr  = document.getElementById('login-screen');
 const gameScr   = document.getElementById('game-screen');
 const statsScr  = document.getElementById('stats-screen');
 
+// ─── POTION SYSTEM STATE ─────────────────────────────────────────────────────
+let activePotion = null; // 'invert_move', 'invert_vertical', or 'swap_spell'
+const POTION_TYPES = [
+  { id: 'invert_move', name: 'Potion of Mirroring', desc: 'Swaps Left & Right keys' },
+  { id: 'invert_vertical', name: 'Potion of Vertigo', desc: 'Swaps Up & Down keys' },
+  { id: 'swap_spell', name: 'Potion of Chaos', desc: 'F fires bolt, Space is Jump' } 
+];
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 nameInput.addEventListener('input', () => {
   enterBtn.disabled = nameInput.value.trim().length < 2;
@@ -54,18 +62,23 @@ const LEVEL_CONFIG = {
 // ─── PROGRESSION SYSTEM ───────────────────────────────────────────────────────
 const PROGRESSION = {
   levelSettings: [
-    // Level 1: Easy - 2 enemies to kill
+    // Level 1: 1 enemy
+    { type: 'slayer', enemiesToKill: 1, roomSize: 10, enemyDifficulty: 'easy' },
+    // Level 2: 2 enemies
     { type: 'slayer', enemiesToKill: 2, roomSize: 10, enemyDifficulty: 'easy' },
-    // Level 2: Easy-Medium - 3 enemies
+    // Level 3: 3 enemies
     { type: 'slayer', enemiesToKill: 3, roomSize: 11, enemyDifficulty: 'easy' },
-    // Level 3: Medium - 4 enemies
-    { type: 'slayer', enemiesToKill: 4, roomSize: 12, enemyDifficulty: 'medium' },
-    // Level 4: Medium - 5 enemies
-    { type: 'slayer', enemiesToKill: 5, roomSize: 13, enemyDifficulty: 'medium' },
-    // Level 5: Hard - 6 enemies
-    { type: 'slayer', enemiesToKill: 6, roomSize: 14, enemyDifficulty: 'hard' },
-    // Level 6: Hard - 7 enemies
-    { type: 'slayer', enemiesToKill: 7, roomSize: 15, enemyDifficulty: 'hard' },
+    // Level 4: 4 enemies
+    { type: 'slayer', enemiesToKill: 4, roomSize: 11, enemyDifficulty: 'medium' },
+    // Level 5: 5 enemies
+    { type: 'slayer', enemiesToKill: 5, roomSize: 12, enemyDifficulty: 'medium' },
+    // Level 6: 6 enemies
+    { type: 'slayer', enemiesToKill: 6, roomSize: 13, enemyDifficulty: 'hard' },
+    // Level 7: 7 enemies
+    { type: 'slayer', enemiesToKill: 7, roomSize: 14, enemyDifficulty: 'hard' },
+    // Level 8: 8 enemies
+    { type: 'slayer', enemiesToKill: 8, roomSize: 15, enemyDifficulty: 'hard' },
+    
   ]
 };
 
@@ -77,6 +90,23 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyF' && scene) fireMagicBolt();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+
+  // Determine which key is allowed to fire based on the potion
+  const canFireWithF = (activePotion !== 'swap_spell' && e.code === 'KeyF');
+  const canFireWithSpace = (activePotion === 'swap_spell' && e.code === 'Space');
+
+  if (canFireWithF || canFireWithSpace) {
+    if (scene) fireMagicBolt();
+  }
+
+  // Prevent browser scrolling for both possible jump keys
+  if (e.code === 'Space' || e.code === 'KeyF') {
+    e.preventDefault();
+  }
+});
 
 // ─── THREE.JS CORE ────────────────────────────────────────────────────────────
 let renderer, scene, camera, playerGroup;
@@ -479,20 +509,21 @@ function checkBoltCollisions() {
     
     for (let j = _levelState.enemies.length - 1; j >= 0; j--) {
       const enemy = _levelState.enemies[j];
-      
       const dist = bolt.position.distanceTo(enemy.position);
       
-      if (dist < 1.2) { // Slightly larger hitbox for better feel
-        // Reduce health instead of instant kill
+      if (dist < 1.2) {
+        // VISUAL FEEDBACK: Hit Stop & Shake
+        gameScr.classList.add('shake');
+        setTimeout(() => gameScr.classList.remove('shake'), 150);
+
         enemy.health -= 1; 
-        
         spawnBoltBurst(bolt.position.x, bolt.position.y, bolt.position.z);
         removeBolt(i); 
         
         if (enemy.health <= 0) {
           killEnemy(j);
         }
-        break; // Stop checking this bolt, it's gone
+        break; 
       }
     }
   }
@@ -548,12 +579,33 @@ function gameLoop(ts) {
 
   if (!scene || !playerGroup) return;
 
-  // Input & movement
+  // 1. Get raw input
+  let moveUp    = keys['KeyW'] || keys['ArrowUp'];
+  let moveDown  = keys['KeyS'] || keys['ArrowDown'];
+  let moveLeft  = keys['KeyA'] || keys['ArrowLeft'];
+  let moveRight = keys['KeyD'] || keys['ArrowRight'];
+
+  // 2. Apply Potion Influences
+  if (activePotion === 'invert_move') {
+      // Swap Left and Right
+      const temp = moveLeft;
+      moveLeft = moveRight;
+      moveRight = temp;
+  }
+
+  if (activePotion === 'invert_vertical') {
+    // Swap Up and Down
+    const temp = moveUp;
+    moveUp = moveDown;
+    moveDown = temp;
+  }
+
+  // 3. Process the (potentially swapped) movement
   const input = new THREE.Vector3(0, 0, 0);
-  if (keys['KeyW'] || keys['ArrowUp']) input.z -= 1;
-  if (keys['KeyS'] || keys['ArrowDown']) input.z += 1;
-  if (keys['KeyA'] || keys['ArrowLeft']) input.x -= 1;
-  if (keys['KeyD'] || keys['ArrowRight']) input.x += 1;
+  if (moveUp)    input.z -= 1;
+  if (moveDown)  input.z += 1;
+  if (moveLeft)  input.x -= 1;
+  if (moveRight) input.x += 1;
   
   if (input.length() > 0) {
     input.normalize();
@@ -643,65 +695,118 @@ function gameLoop(ts) {
 }
 
 function spawnLevelDoor() {
-  if (_levelState.doorMesh) return; // Already spawned
+  if (_levelState.doorMesh) return;
 
-  // Create door frame
   const doorGroup = new THREE.Group();
   
-  // Door frame border
-  const frameMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+  // 1. THE OBSIDIAN ARCHWAY
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8, metalness: 0.2 });
+  const frameGeo = new THREE.BoxGeometry(0.4, 3.8, 0.6);
   
-  // Vertical left
-  const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.5, 0.2), frameMat);
-  leftFrame.position.set(-0.6, 1.25, 0);
-  doorGroup.add(leftFrame);
+  const p1 = new THREE.Mesh(frameGeo, stoneMat); p1.position.set(-1.3, 1.9, 0);
+  const p2 = new THREE.Mesh(frameGeo, stoneMat); p2.position.set(1.3, 1.9, 0);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 0.6), stoneMat); top.position.set(0, 3.8, 0);
   
-  // Vertical right
-  const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.5, 0.2), frameMat);
-  rightFrame.position.set(0.6, 1.25, 0);
-  doorGroup.add(rightFrame);
-  
-  // Horizontal top
-  const topFrame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 0.2), frameMat);
-  topFrame.position.set(0, 2.45, 0);
-  doorGroup.add(topFrame);
-  
-  // Door itself - glowing portal
-  const doorMat = new THREE.MeshLambertMaterial({
-    color: 0x00ff00,
-    emissive: 0x00ff00,
-    emissiveIntensity: 0.8,
-    transparent: true,
-    opacity: 0.85
+  doorGroup.add(p1, p2, top);
+
+  // 2. THE MAGICAL VORTEX (Layered)
+  // Outer Energy Ring
+  const ringGeo = new THREE.TorusGeometry(1.2, 0.04, 16, 100);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5 });
+  const ring1 = new THREE.Mesh(ringGeo, ringMat);
+  ring1.position.y = 1.9;
+  doorGroup.add(ring1);
+
+  // Inner Swirl
+  const vortexGeo = new THREE.PlaneGeometry(2.2, 3.4);
+  const vortexMat = new THREE.MeshBasicMaterial({ 
+    color: 0x002244, 
+    transparent: true, 
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending 
   });
-  const doorPortal = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 0.1), doorMat);
-  doorPortal.position.z = 0.05;
-  doorGroup.add(doorPortal);
-  
-  // Glowing light
-  const doorLight = new THREE.PointLight(0x00ff00, 3, 15);
-  doorLight.position.set(0, 1.2, 1);
-  doorGroup.add(doorLight);
-  
-  // Position door at far end of room
-  doorGroup.position.set(0, 0, -8);
-  doorGroup.castShadow = true;
-  
+  const vortex = new THREE.Mesh(vortexGeo, vortexMat);
+  vortex.position.set(0, 1.9, -0.1);
+  doorGroup.add(vortex);
+
+  // 3. ORBITING RUNES
+  const runes = [];
+  for(let i=0; i<8; i++) {
+    const r = new THREE.Mesh(new THREE.OctahedronGeometry(0.1), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+    const pivot = new THREE.Group();
+    pivot.position.y = 1.9;
+    pivot.add(r);
+    r.position.x = 1.5;
+    pivot.rotation.z = (i / 8) * Math.PI * 2;
+    doorGroup.add(pivot);
+    runes.push(pivot);
+  }
+
+  // 4. VOLUMETRIC LIGHTING
+  const light = new THREE.PointLight(0x00ffff, 10, 15);
+  light.position.set(0, 1.9, 1);
+  doorGroup.add(light);
+
+  // ANIMATION LOOP
+  let clock = 0;
+  const animatePortal = () => {
+    if (!_levelState.doorMesh) return;
+    clock += 0.02;
+    
+    ring1.rotation.z += 0.05;
+    vortex.scale.set(1 + Math.sin(clock)*0.05, 1 + Math.cos(clock)*0.05, 1);
+    runes.forEach((p, i) => p.rotation.z += 0.01 * (i + 1));
+    light.intensity = 8 + Math.random() * 4;
+
+    requestAnimationFrame(animatePortal);
+  };
+
+  doorGroup.position.set(0, 0, -9);
   scene.add(doorGroup);
   _levelState.doorMesh = doorGroup;
-  
-  // Add floating animation
-  let floatTime = 0;
-  const floatInterval = setInterval(() => {
-    if (!_levelState.doorMesh) {
-      clearInterval(floatInterval);
-      return;
-    }
-    floatTime += 0.016;
-    doorGroup.position.y = Math.sin(floatTime * 2) * 0.3;
-  }, 16);
+  animatePortal();
 }
+function showPotionSelection() {
+  const overlay = document.createElement('div');
+  overlay.id = 'potion-overlay';
+  overlay.style = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10, 5, 20, 0.95); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 1000;
+    font-family: 'Crimson Pro', serif; color: #fff;
+  `;
 
+  overlay.innerHTML = `
+    <h1 style="color: #d4a820; text-shadow: 0 0 20px rgba(212,168,32,0.5);">Drink Your Fate</h1>
+    <p style="margin-bottom: 30px; font-style: italic;">The effects are unknown until tasted...</p>
+    <div id="potion-container" style="display:flex; gap:30px;"></div>
+  `;
+  
+  const container = overlay.querySelector('#potion-container');
+
+  // Shuffle and show buttons without descriptions
+  [...POTION_TYPES].sort(() => Math.random() - 0.5).forEach(potion => {
+    const btn = document.createElement('button');
+    btn.style = `
+      padding: 40px 20px; background: #1a1060; border: 2px solid #d4a820;
+      color: gold; cursor: pointer; width: 180px; transition: 0.3s;
+      border-radius: 10px; font-size: 1.2rem; font-weight: bold;
+    `;
+    btn.innerHTML = potion.name;
+    
+    btn.onmouseover = () => btn.style.background = '#2a1a80';
+    btn.onmouseout = () => btn.style.background = '#1a1060';
+    
+    btn.onclick = () => {
+      activePotion = potion.id;
+      overlay.remove();
+      generateLevel(); 
+    };
+    container.appendChild(btn);
+  });
+
+  document.body.appendChild(overlay);
+}
 function checkDoorCollision(playerPos) {
   if (!_levelState.doorMesh) return;
   
@@ -723,35 +828,78 @@ function completeLevel() {
   _levelState.levelComplete = true;
   levelsCompleted++;
 
-  // Flash screen with golden glow
+  // Elegant gradient flash
   const flash = document.createElement('div');
   flash.style.position = 'fixed';
   flash.style.top = '0';
   flash.style.left = '0';
   flash.style.width = '100%';
   flash.style.height = '100%';
-  flash.style.background = 'rgba(255, 200, 50, 0.5)';
+  flash.style.background = 'radial-gradient(circle, rgba(0, 255, 136, 0.4), rgba(255, 200, 50, 0.3))';
   flash.style.pointerEvents = 'none';
   flash.style.zIndex = '10';
+  flash.style.animation = 'fadeOut 1.2s ease-out';
   document.body.appendChild(flash);
 
-  // Show level complete message
+  // Elegant level complete container
+  const messageContainer = document.createElement('div');
+  messageContainer.style.position = 'fixed';
+  messageContainer.style.top = '50%';
+  messageContainer.style.left = '50%';
+  messageContainer.style.transform = 'translate(-50%, -50%)';
+  messageContainer.style.zIndex = '11';
+  messageContainer.style.pointerEvents = 'none';
+  messageContainer.style.textAlign = 'center';
+  
+  // Main message
   const message = document.createElement('div');
-  message.style.position = 'fixed';
-  message.style.top = '50%';
-  message.style.left = '50%';
-  message.style.transform = 'translate(-50%, -50%)';
-  message.style.fontSize = '3rem';
-  message.style.color = '#ffcc00';
-  message.style.textShadow = '0 0 20px rgba(255, 200, 50, 1)';
-  message.style.zIndex = '11';
+  message.style.fontSize = '3.5rem';
+  message.style.color = '#00ff88';
+  message.style.textShadow = '0 0 30px rgba(0, 255, 136, 0.8), 0 0 60px rgba(0, 255, 136, 0.4)';
   message.style.fontFamily = "'Crimson Pro', serif";
   message.style.fontWeight = 'bold';
-  message.style.pointerEvents = 'none';
+  message.style.letterSpacing = '0.15em';
+  message.style.marginBottom = '1rem';
+  message.style.animation = 'scaleIn 0.6s ease-out';
+  message.textContent = '✦ LEVEL COMPLETE ✦';
+  messageContainer.appendChild(message);
   
-  message.textContent = 'LEVEL COMPLETE!';
+  // Level number display
+  const levelDisplay = document.createElement('div');
+  levelDisplay.style.fontSize = '1.8rem';
+  levelDisplay.style.color = '#ffaa00';
+  levelDisplay.style.textShadow = '0 0 15px rgba(255, 170, 0, 0.6)';
+  levelDisplay.style.fontFamily = "'Crimson Pro', serif";
+  levelDisplay.style.letterSpacing = '0.1em';
+  levelDisplay.style.marginTop = '0.5rem';
+  levelDisplay.style.animation = 'scaleIn 0.8s ease-out';
+  levelDisplay.textContent = `Depth: Level ${levelsCompleted}`;
+  messageContainer.appendChild(levelDisplay);
   
-  document.body.appendChild(message);
+  // Add CSS animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes scaleIn {
+      0% { 
+        transform: scale(0.3);
+        opacity: 0;
+      }
+      100% { 
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  `;
+  if (!document.querySelector('style[data-level-complete]')) {
+    style.setAttribute('data-level-complete', 'true');
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(messageContainer);
 
   // Remove all enemies
   _levelState.enemies.forEach(enemy => {
@@ -766,11 +914,13 @@ function completeLevel() {
     _levelState.doorMesh = null;
   }
 
+  // Inside completeLevel()...
   setTimeout(() => {
-    flash.remove();
-    message.remove();
-    // Start next level
-    generateLevel();
+      flash.remove();
+      messageContainer.remove();
+      
+      // Instead of generateLevel(), show the choice!
+      showPotionSelection(); 
   }, 1200);
 }
 
