@@ -187,6 +187,11 @@ const DungeonWorld = (() => {
       { pos: [ 5, 2.5, -(ROOM_HALF - 0.15)], ry: 0 },
       { pos: [-5, 2.5,  (ROOM_HALF - 0.15)], ry: Math.PI },
       { pos: [ 5, 2.5,  (ROOM_HALF - 0.15)], ry: Math.PI },
+      // Additional sconces for better level lighting
+      { pos: [-7, 2.5, -5], ry: 0.5 },
+      { pos: [ 7, 2.5,  5], ry: Math.PI - 0.5 },
+      { pos: [-5, 2.5,  7], ry: 0 },
+      { pos: [ 5, 2.5, -7], ry: Math.PI },
     ];
 
     sconcePositions.forEach(({ pos, ry }) => {
@@ -230,17 +235,28 @@ const DungeonWorld = (() => {
       { type: 'barrel', x:  3.9, z: -2.3, scale: 0.85 },
       { type: 'barrel', x: -4,   z:  5,   scale: 1    },
       { type: 'barrel', x: -4.5, z:  4.3, scale: 0.9  },
+      { type: 'barrel', x:  7,   z: -6,   scale: 1    },
+      { type: 'barrel', x: -7,   z:  3,   scale: 0.95 },
+      
       // Crates
       { type: 'crate',  x:  6,   z:  2,   scale: 1    },
       { type: 'crate',  x:  6.6, z:  2.6, scale: 0.8  },
       { type: 'crate',  x: -6,   z: -4,   scale: 1    },
+      { type: 'crate',  x: -3.5, z:  7,   scale: 0.9  },
+      { type: 'crate',  x:  2,   z: -6,   scale: 1    },
+      
       // Stone blocks
       { type: 'stone',  x: -1,   z:  7,   scale: 1    },
       { type: 'stone',  x:  1.2, z:  7.3, scale: 1.2  },
       { type: 'stone',  x:  0,   z: -7,   scale: 0.9  },
+      { type: 'stone',  x:  5,   z:  6,   scale: 1    },
+      { type: 'stone',  x: -5,   z: -5,   scale: 1.1  },
+      { type: 'stone',  x:  3,   z:  3,   scale: 0.8  },
+      
       // Sarcophagus-like big block
       { type: 'sarcoph', x: -7,  z: -7,   scale: 1    },
       { type: 'sarcoph', x:  7,  z:  7,   scale: 1    },
+      { type: 'sarcoph', x:  0,  z:  0,   scale: 0.8  },
     ];
 
     defs.forEach(def => {
@@ -500,13 +516,12 @@ const DungeonWorld = (() => {
    * @param {THREE.Group}  playerGroup
    * @param {boolean}      isMoving   - true if WASD pressed
    * @param {object}       keys       - your keys{} map
-   * @param {string}       jumpKey    - the key code that triggers jump (volatile)
    */
   function update(ts, dt, playerGroup, isMoving, keys, jumpKey = 'Space') {
     if (_disposed) return;
 
     /* ── JUMP PHYSICS ── */
-    const wantsJump     = keys[jumpKey];
+    const wantsJump = keys[jumpKey];
     const groundLevel   = getObstacleTopAt(playerGroup.position.x, playerGroup.position.z, PLAYER_R);
 
     if (wantsJump && !_jumpPressed && _onGround) {
@@ -515,6 +530,8 @@ const DungeonWorld = (() => {
       _jumpPressed = true;
       // Dust burst on jump
       for (let i = 0; i < 5; i++) spawnDust(playerGroup.position.x, 0.05, playerGroup.position.z);
+      // 🔊 Play jump sound if audio exists
+      if (typeof AUDIO !== 'undefined') AUDIO.jump();
     }
     if (!wantsJump) _jumpPressed = false;
 
@@ -528,6 +545,8 @@ const DungeonWorld = (() => {
         _onGround = true;
         // Dust burst on landing
         for (let i = 0; i < 8; i++) spawnDust(playerGroup.position.x, groundLevel + 0.05, playerGroup.position.z);
+        // 🔊 Play land sound if audio exists
+        if (typeof AUDIO !== 'undefined') AUDIO.land();
       }
     } else {
       playerGroup.position.y = groundLevel;
