@@ -84,28 +84,38 @@ const PROGRESSION = {
 
 // ─── INPUT ────────────────────────────────────────────────────────────────────
 const keys = {};
-window.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (e.code === 'Space') e.preventDefault();
-  if (e.code === 'KeyF' && scene) fireMagicBolt();
-});
-window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Volatile key bindings - can swap based on potion
+let JUMP_KEY = 'Space';
+let SPELL_KEY = 'KeyF';
+
+// Update key bindings based on potion
+function updateKeyBindings() {
+  if (activePotion === 'swap_spell') {
+    JUMP_KEY = 'KeyF';
+    SPELL_KEY = 'Space';
+  } else {
+    JUMP_KEY = 'Space';
+    SPELL_KEY = 'KeyF';
+  }
+}
 
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
 
-  // Determine which key is allowed to fire based on the potion
-  const canFireWithF = (activePotion !== 'swap_spell' && e.code === 'KeyF');
-  const canFireWithSpace = (activePotion === 'swap_spell' && e.code === 'Space');
-
-  if (canFireWithF || canFireWithSpace) {
-    if (scene) fireMagicBolt();
+  // Cast spell if this is the spell key
+  if (e.code === SPELL_KEY && scene) {
+    fireMagicBolt();
   }
 
-  // Prevent browser scrolling for both possible jump keys
-  if (e.code === 'Space' || e.code === 'KeyF') {
+  // Prevent browser scrolling for jump and spell keys
+  if (e.code === JUMP_KEY || e.code === SPELL_KEY) {
     e.preventDefault();
   }
+});
+
+window.addEventListener('keyup', e => { 
+  keys[e.code] = false; 
 });
 
 // ─── THREE.JS CORE ────────────────────────────────────────────────────────────
@@ -260,9 +270,13 @@ function generateLevel() {
   
   currentLevel = levelsCompleted + 1;
   
+  // Update key bindings based on active potion
+  updateKeyBindings();
+  
   console.log("=== LEVEL", currentLevel, "STARTED ===");
   console.log("Enemy target:", settings.enemiesToKill);
   console.log("Difficulty:", settings.enemyDifficulty);
+  console.log("Key Bindings - Jump:", JUMP_KEY, "Spell:", SPELL_KEY);
   
   // Reset level state
   _levelState = {
@@ -630,7 +644,7 @@ function gameLoop(ts) {
   }
 
   const isMoving = input.length() > 0;
-  DungeonWorld.update(ts, dt, playerGroup, isMoving, keys);
+  DungeonWorld.update(ts, dt, playerGroup, isMoving, keys, JUMP_KEY);
 
   // Update bolts
   for (let i = 0; i < _bolts.length; i++) {

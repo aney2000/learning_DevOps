@@ -500,13 +500,14 @@ const DungeonWorld = (() => {
    * @param {THREE.Group}  playerGroup
    * @param {boolean}      isMoving   - true if WASD pressed
    * @param {object}       keys       - your keys{} map
+   * @param {string}       jumpKey    - the key code that triggers jump (volatile)
    */
-  function update(ts, dt, playerGroup, isMoving, keys) {
+  function update(ts, dt, playerGroup, isMoving, keys, jumpKey = 'Space') {
     if (_disposed) return;
 
     /* ── JUMP PHYSICS ── */
+    const wantsJump     = keys[jumpKey];
     const groundLevel   = getObstacleTopAt(playerGroup.position.x, playerGroup.position.z, PLAYER_R);
-    const wantsJump     = keys['Space'] || keys['KeyJ'];
 
     if (wantsJump && !_jumpPressed && _onGround) {
       _velY      = JUMP_V;
