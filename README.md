@@ -2,7 +2,7 @@
 
 Joc 3D multiplayer în browser — Phase I.
 
-## Structura proiectului
+## Project Structure
 
 ```
 dungeon/
@@ -10,29 +10,29 @@ dungeon/
 │   └── workflows/
 │       └── ci.yml        ← GitHub Actions: lint + docker smoke test
 ├── src/
-│   ├── css/              ← stiluri
-│   ├── js/               ← logica jocului
+│   ├── css/              ← styles
+│   ├── js/               ← game logic
 │   └── game.html         ← entry point
-├── Dockerfile            ← containerizare cu nginx:alpine
+├── Dockerfile            ← containerization with nginx:alpine
 ├── .dockerignore
 └── README.md
+
 ```
 
-## Cum rulezi local cu Docker
+## How to Run Locally with Docker
 
-```bash
-# Construiesti imaginea
+```Bash
+# Build the image
 docker build -t dungeon-game .
 
-# Pornesti containerul
+# Start the container
 docker run -p 8080:80 dungeon-game
 
-# Deschizi in browser
+# Open in browser
 http://localhost:8080/game.html
 ```
 
 ## CI/CD
-
-La fiecare push sau Pull Request spre `master`, GitHub Actions:
-1. **validate** — lint HTML + verifica structura (rulat in Alpine)
-2. **docker-build** — construieste imaginea si face smoke test HTTP
+On every push or Pull Request to master, GitHub Actions performs:
+1. **validate** — HTML linting + structure verification (running in Alpine)
+2. **docker-build** — builds the image and performs an HTTP smoke test
