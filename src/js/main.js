@@ -18,6 +18,213 @@ const loginScr  = document.getElementById('login-screen');
 const gameScr   = document.getElementById('game-screen');
 const statsScr  = document.getElementById('stats-screen');
 
+// ─── AUDIO SYSTEM ─────────────────────────────────────────────────────────────
+let audioContext = null;
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioContext;
+}
+
+// Sound effect generator functions
+const SFX = {
+  // Damage/pain sound
+  damage: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(450, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.2);
+    
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+  },
+
+  // Spell cast sound (whoosh)
+  castSpell: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Ascending pitch for magical feel
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    osc.start(now);
+    osc.stop(now + 0.15);
+  },
+
+  // Enemy hit sound (sharp click)
+  enemyHit: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // High-pitched impact
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+    
+    osc.start(now);
+    osc.stop(now + 0.08);
+  },
+
+  // Enemy death sound
+  enemyDeath: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Descending sweep for death
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    osc.start(now);
+    osc.stop(now + 0.3);
+  },
+
+  // Level complete sound (ascending tones)
+  levelComplete: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    // First note
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    
+    osc1.frequency.setValueAtTime(523, now); // C5
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    osc1.start(now);
+    osc1.stop(now + 0.2);
+    
+    // Second note
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    
+    osc2.frequency.setValueAtTime(659, now + 0.15); // E5
+    gain2.gain.setValueAtTime(0.3, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.35);
+    
+    // Third note
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.connect(gain3);
+    gain3.connect(ctx.destination);
+    
+    osc3.frequency.setValueAtTime(784, now + 0.3); // G5
+    gain3.gain.setValueAtTime(0.3, now + 0.3);
+    gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+    osc3.start(now + 0.3);
+    osc3.stop(now + 0.6);
+  },
+
+  // Game over sound (descending minor tones)
+  gameOver: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    // Low descending tone
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.5);
+    
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    
+    osc.start(now);
+    osc.stop(now + 0.5);
+  },
+
+  // Footstep sound (subtle low thud)
+  footstep: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+    
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    
+    osc.start(now);
+    osc.stop(now + 0.1);
+  },
+
+  // Potion selection sound
+  potionSelect: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Magical shimmer
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(500, now + 0.2);
+    
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+};
+
 // ─── POTION SYSTEM STATE ─────────────────────────────────────────────────────
 let activePotion = null; // 'invert_move', 'invert_vertical', or 'swap_spell'
 const POTION_TYPES = [
@@ -31,34 +238,10 @@ let playerHealth = 5;
 const MAX_HEALTH = 5;
 let lastDamageTime = 0;
 const DAMAGE_COOLDOWN = 0.5; // Prevent rapid damage hits (in seconds)
-let damageAudioContext = null;
 
 // Create damage sound effect using Web Audio API
 function createDamageSound() {
-  if (!damageAudioContext) {
-    damageAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  
-  const ctx = damageAudioContext;
-  const now = ctx.currentTime;
-  
-  // Create a descending whoosh-hurt sound
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  
-  // Descending pitch (pain sound)
-  osc.frequency.setValueAtTime(450, now);
-  osc.frequency.exponentialRampToValueAtTime(180, now + 0.2);
-  
-  // Quick attack, fast release
-  gain.gain.setValueAtTime(0.4, now);
-  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-  
-  osc.start(now);
-  osc.stop(now + 0.2);
+  SFX.damage();
 }
 
 // Create health bar UI
@@ -66,7 +249,7 @@ function initHealthBar() {
   const healthBarContainer = document.createElement('div');
   healthBarContainer.id = 'health-bar-container';
   healthBarContainer.style.position = 'fixed';
-  healthBarContainer.style.top = '120px';
+  healthBarContainer.style.top = '100px';
   healthBarContainer.style.left = '20px';
   healthBarContainer.style.zIndex = '100';
   healthBarContainer.style.fontFamily = "'Crimson Pro', serif";
@@ -161,6 +344,9 @@ function gameOver() {
   cancelAnimationFrame(animFrameId);
   clearInterval(timerInterval);
   
+  // Play game over sound
+  SFX.gameOver();
+  
   const gameOverContainer = document.createElement('div');
   gameOverContainer.style.position = 'fixed';
   gameOverContainer.style.top = '50%';
@@ -176,7 +362,7 @@ function gameOver() {
   gameOverText.style.textShadow = '0 0 30px rgba(255, 0, 0, 0.8)';
   gameOverText.style.marginBottom = '2rem';
   gameOverText.style.letterSpacing = '0.1em';
-  gameOverText.textContent = '✦ YOU FELL ✦';
+  gameOverText.textContent = '✦ YOU DIED ✦';
   
   const depthText = document.createElement('div');
   depthText.style.fontSize = '1.5rem';
@@ -630,6 +816,9 @@ function fireMagicBolt() {
   if (_boltCooldown > 0 || !playerGroup) return;
   _boltCooldown = BOLT_COOLDOWN;
   spellsFired++;
+  
+  // Play spell cast sound
+  SFX.castSpell();
 
   const armPos = _castArm.getWorldPosition(new THREE.Vector3());
   const dir = new THREE.Vector3(0, 0, -1);
@@ -696,11 +885,15 @@ function checkBoltCollisions() {
         gameScr.classList.add('shake');
         setTimeout(() => gameScr.classList.remove('shake'), 150);
 
-        enemy.health -= 1; 
+        enemy.health -= 1;
+        // Play hit sound
+        SFX.enemyHit();
         spawnBoltBurst(bolt.position.x, bolt.position.y, bolt.position.z);
         removeBolt(i); 
         
         if (enemy.health <= 0) {
+          // Play death sound
+          SFX.enemyDeath();
           killEnemy(j);
         }
         break; 
@@ -750,6 +943,8 @@ function removeBolt(boltIndex) {
 }
 
 // ─── GAME LOOP ────────────────────────────────────────────────────────────────
+
+let lastFootstepTime = 0;
 
 function gameLoop(ts) {
   animFrameId = requestAnimationFrame(gameLoop);
@@ -807,6 +1002,12 @@ function gameLoop(ts) {
     
     steps++;
     distanceTravelled += movement.length();
+    
+    // Play footstep sounds occasionally during movement
+    if (ts - lastFootstepTime > 300) { // Every 300ms
+      SFX.footstep();
+      lastFootstepTime = ts;
+    }
   }
 
   const isMoving = input.length() > 0;
@@ -979,6 +1180,8 @@ function showPotionSelection() {
     
     btn.onclick = () => {
       activePotion = potion.id;
+      // Play potion select sound
+      SFX.potionSelect();
       overlay.remove();
       generateLevel(); 
     };
@@ -1007,6 +1210,9 @@ function completeLevel() {
   
   _levelState.levelComplete = true;
   levelsCompleted++;
+  
+  // Play level complete sound
+  SFX.levelComplete();
 
   // Elegant gradient flash
   const flash = document.createElement('div');
