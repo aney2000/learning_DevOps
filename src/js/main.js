@@ -554,16 +554,13 @@ function updateEnemies(dt, playerPos) {
     enemy.healthBar.material.color.setHex(healthColor);
 
     if (distToPlayer < enemy.aggroRange) {
-      // Chase player
-      if (distToPlayer > enemy.attackRange) {
-        toPlayer.normalize();
-        enemy.position.addScaledVector(toPlayer, enemy.speed * dt);
-      } else {
-        // Attack player if in range
-        // Check collision with player for damage
-        if (distToPlayer < 0.8) {
-          takeDamage();
-        }
+      // Chase player - ALWAYS move towards them
+      toPlayer.normalize();
+      enemy.position.addScaledVector(toPlayer, enemy.speed * dt);
+      
+      // Check collision with player for damage (at close range)
+      if (distToPlayer < 0.8) {
+        takeDamage();
       }
     } else {
       // Wander randomly
