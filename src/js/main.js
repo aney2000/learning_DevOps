@@ -26,6 +26,186 @@ const POTION_TYPES = [
   { id: 'swap_spell', name: 'Potion of Chaos', desc: 'F fires bolt, Space is Jump' } 
 ];
 
+// ─── HEALTH SYSTEM ────────────────────────────────────────────────────────────
+let playerHealth = 5;
+const MAX_HEALTH = 5;
+let lastDamageTime = 0;
+const DAMAGE_COOLDOWN = 0.5; // Prevent rapid damage hits (in seconds)
+let damageAudioContext = null;
+
+// Create damage sound effect using Web Audio API
+function createDamageSound() {
+  if (!damageAudioContext) {
+    damageAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  
+  const ctx = damageAudioContext;
+  const now = ctx.currentTime;
+  
+  // Create a descending whoosh-hurt sound
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  // Descending pitch (pain sound)
+  osc.frequency.setValueAtTime(450, now);
+  osc.frequency.exponentialRampToValueAtTime(180, now + 0.2);
+  
+  // Quick attack, fast release
+  gain.gain.setValueAtTime(0.4, now);
+  gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+  
+  osc.start(now);
+  osc.stop(now + 0.2);
+}
+
+// Create health bar UI
+function initHealthBar() {
+  const healthBarContainer = document.createElement('div');
+  healthBarContainer.id = 'health-bar-container';
+  healthBarContainer.style.position = 'fixed';
+  healthBarContainer.style.top = '120px';
+  healthBarContainer.style.left = '20px';
+  healthBarContainer.style.zIndex = '100';
+  healthBarContainer.style.fontFamily = "'Crimson Pro', serif";
+  
+  const healthLabel = document.createElement('div');
+  healthLabel.style.color = '#ffaa00';
+  healthLabel.style.fontSize = '1.2rem';
+  healthLabel.style.marginBottom = '8px';
+  healthLabel.style.textShadow = '0 0 10px rgba(255, 170, 0, 0.6)';
+  healthLabel.style.letterSpacing = '0.1em';
+  healthLabel.textContent = 'HEALTH';
+  
+  const healthBarsDiv = document.createElement('div');
+  healthBarsDiv.id = 'health-bars';
+  healthBarsDiv.style.display = 'flex';
+  healthBarsDiv.style.gap = '6px';
+  
+  // Create 5 health bar units
+  for (let i = 0; i < MAX_HEALTH; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'health-unit';
+    bar.style.width = '24px';
+    bar.style.height = '24px';
+    bar.style.backgroundColor = '#00ff00';
+    bar.style.border = '2px solid #00cc00';
+    bar.style.boxShadow = '0 0 8px rgba(0, 255, 0, 0.6), inset 0 0 4px rgba(0, 255, 0, 0.3)';
+    bar.style.borderRadius = '3px';
+    bar.style.transition = 'all 0.3s ease';
+    healthBarsDiv.appendChild(bar);
+  }
+  
+  healthBarContainer.appendChild(healthLabel);
+  healthBarContainer.appendChild(healthBarsDiv);
+  document.body.appendChild(healthBarContainer);
+}
+
+// Update health bar display
+function updateHealthBarDisplay() {
+  const healthBars = document.querySelectorAll('.health-unit');
+  healthBars.forEach((bar, index) => {
+    if (index < playerHealth) {
+      // Active health unit - green and glowing
+      bar.style.backgroundColor = '#00ff00';
+      bar.style.boxShadow = '0 0 8px rgba(0, 255, 0, 0.6), inset 0 0 4px rgba(0, 255, 0, 0.3)';
+    } else {
+      // Depleted health unit - dark and faded
+      bar.style.backgroundColor = '#1a1a1a';
+      bar.style.boxShadow = '0 0 4px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(0, 0, 0, 0.5)';
+    }
+  });
+}
+
+// Take damage from enemy collision
+function takeDamage() {
+  const now = Date.now() / 1000; // Convert to seconds
+  
+  // Cooldown check to prevent rapid damage
+  if (now - lastDamageTime < DAMAGE_COOLDOWN) {
+    return;
+  }
+  
+  lastDamageTime = now;
+  
+  if (playerHealth > 0) {
+    playerHealth--;
+    createDamageSound();
+    updateHealthBarDisplay();
+    
+    // Flash red effect on screen when damaged
+    const flash = document.createElement('div');
+    flash.style.position = 'fixed';
+    flash.style.top = '0';
+    flash.style.left = '0';
+    flash.style.width = '100%';
+    flash.style.height = '100%';
+    flash.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+    flash.style.pointerEvents = 'none';
+    flash.style.zIndex = '99';
+    document.body.appendChild(flash);
+    
+    setTimeout(() => flash.remove(), 200);
+    
+    // Game over if health reaches 0
+    if (playerHealth <= 0) {
+      gameOver();
+    }
+  }
+}
+
+// Game over function
+function gameOver() {
+  cancelAnimationFrame(animFrameId);
+  clearInterval(timerInterval);
+  
+  const gameOverContainer = document.createElement('div');
+  gameOverContainer.style.position = 'fixed';
+  gameOverContainer.style.top = '50%';
+  gameOverContainer.style.left = '50%';
+  gameOverContainer.style.transform = 'translate(-50%, -50%)';
+  gameOverContainer.style.textAlign = 'center';
+  gameOverContainer.style.zIndex = '200';
+  gameOverContainer.style.fontFamily = "'Crimson Pro', serif";
+  
+  const gameOverText = document.createElement('div');
+  gameOverText.style.fontSize = '4rem';
+  gameOverText.style.color = '#ff0000';
+  gameOverText.style.textShadow = '0 0 30px rgba(255, 0, 0, 0.8)';
+  gameOverText.style.marginBottom = '2rem';
+  gameOverText.style.letterSpacing = '0.1em';
+  gameOverText.textContent = '✦ YOU FELL ✦';
+  
+  const depthText = document.createElement('div');
+  depthText.style.fontSize = '1.5rem';
+  depthText.style.color = '#ffaa00';
+  depthText.style.textShadow = '0 0 15px rgba(255, 170, 0, 0.6)';
+  depthText.style.marginBottom = '2rem';
+  depthText.textContent = `Reached Depth: Level ${levelsCompleted}`;
+  
+  const restartBtn = document.createElement('button');
+  restartBtn.textContent = 'Return to Surface';
+  restartBtn.style.padding = '12px 30px';
+  restartBtn.style.fontSize = '1.2rem';
+  restartBtn.style.backgroundColor = '#1a1060';
+  restartBtn.style.color = '#00ff88';
+  restartBtn.style.border = '2px solid #00ff88';
+  restartBtn.style.cursor = 'pointer';
+  restartBtn.style.borderRadius = '5px';
+  restartBtn.style.textShadow = '0 0 10px rgba(0, 255, 136, 0.5)';
+  restartBtn.addEventListener('click', () => {
+    gameOverContainer.remove();
+    endRun();
+  });
+  
+  gameOverContainer.appendChild(gameOverText);
+  gameOverContainer.appendChild(depthText);
+  gameOverContainer.appendChild(restartBtn);
+  document.body.appendChild(gameOverContainer);
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 nameInput.addEventListener('input', () => {
   enterBtn.disabled = nameInput.value.trim().length < 2;
@@ -225,8 +405,8 @@ function buildScene() {
   armL.position.set(-0.35, 1.1, 0);
   armL.rotation.z = 0.45;
   armL.castShadow = true;
-  playerGroup.add(armL);
   _castArm = armL;
+  playerGroup.add(armL);
 
   // Casting orb on left hand
   const orbMat = new THREE.MeshLambertMaterial({
@@ -379,8 +559,11 @@ function updateEnemies(dt, playerPos) {
         toPlayer.normalize();
         enemy.position.addScaledVector(toPlayer, enemy.speed * dt);
       } else {
-        // Attack player if in range (we'll keep this simple for now)
-        // Just face the player
+        // Attack player if in range
+        // Check collision with player for damage
+        if (distToPlayer < 0.8) {
+          takeDamage();
+        }
       }
     } else {
       // Wander randomly
@@ -942,7 +1125,7 @@ function spawnBoltBurst(x, y, z) {
   }
 }
 
-// ─── TIMER ────────────────────────────────────────────────────────────────────
+// ─── TIMER ────────────────────────────────────────────────────────
 function formatTime(ms) {
   const s = Math.floor(ms / 1000), m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -954,7 +1137,7 @@ function startTimer() {
   timerInterval = setInterval(() => { el.textContent = formatTime(Date.now() - startTime); }, 1000);
 }
 
-// ─── RESIZE HANDLER ───────────────────────────────────────────────────────────
+// ─── RESIZE HANDLER ───────────────────────────────────────────────
 function onResize() {
   const canvas = document.getElementById('three-canvas');
   const w = canvas.offsetWidth;
@@ -964,11 +1147,18 @@ function onResize() {
   renderer.setSize(w, h);
 }
 
-// ─── START ────────────────────────────────────────────────────────────────────
+// ─── START ────────────────────────────────────────────────────────
 function startGame() {
   playerName = nameInput.value.trim() || 'Wanderer';
   loginScr.style.display = 'none';
   gameScr.style.display  = 'block';
+  
+  // Reset health for new game
+  playerHealth = MAX_HEALTH;
+  lastDamageTime = 0;
+  initHealthBar();
+  updateHealthBarDisplay();
+  
   buildScene();
   startTimer();
   lastTime = 0;
@@ -977,7 +1167,7 @@ function startGame() {
   document.getElementById('end-btn').addEventListener('click', endRun);
 }
 
-// ─── END ──────────────────────────────────────────────────────────────────────
+// ─── END ──────────────────────────────────────────────────────────
 function endRun() {
   cancelAnimationFrame(animFrameId);
   clearInterval(timerInterval);
@@ -1004,7 +1194,7 @@ function endRun() {
   statsScr.style.display = 'flex';
 }
 
-// ─── PLAY AGAIN ───────────────────────────────────────────────────────────────
+// ─── PLAY AGAIN ───────────────────────────────────────────────────
 document.getElementById('play-again-btn').addEventListener('click', () => {
   steps = 0; 
   distanceTravelled = 0; 
@@ -1012,6 +1202,8 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
   levelsCompleted = 0; 
   currentLevel = 0;
   enemiesKilledTotal = 0;
+  playerHealth = MAX_HEALTH;
+  lastDamageTime = 0;
   _bolts.length = 0; 
   _burstParticles.length = 0;
   _boltCooldown = 0; 
@@ -1033,6 +1225,10 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
   enterBtn.disabled = true;
   document.getElementById('timer-display').textContent    = '00:00';
   document.getElementById('controls-hint').style.opacity = '1';
+  
+  // Remove health bar
+  const healthBar = document.getElementById('health-bar-container');
+  if (healthBar) healthBar.remove();
 
   DungeonWorld.dispose();
   if (renderer) { renderer.dispose(); renderer = null; }

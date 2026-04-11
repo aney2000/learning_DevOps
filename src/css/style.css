@@ -126,7 +126,7 @@ body {
 /* Level indicator (new) */
 #level-indicator {
   position: fixed;
-  top: 20px;
+  top: 130px;
   left: 20px;
   background: rgba(16, 14, 10, 0.85);
   border: 2px solid #d4a820;
