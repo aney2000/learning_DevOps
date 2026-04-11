@@ -18,6 +18,212 @@ const loginScr  = document.getElementById('login-screen');
 const gameScr   = document.getElementById('game-screen');
 const statsScr  = document.getElementById('stats-screen');
 
+// ─── AUDIO SYSTEM ─────────────────────────────────────────────────────────────
+let audioContext = null;
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioContext;
+}
+
+// Sound effect generator functions
+const SFX = {
+  // Damage/pain sound
+  damage: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(450, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.2);
+    
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+  },
+
+  // Spell cast sound (whoosh)
+  castSpell: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Ascending pitch for magical feel
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    osc.start(now);
+    osc.stop(now + 0.15);
+  },
+
+  // Enemy hit sound (sharp click)
+  enemyHit: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // High-pitched impact
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+    
+    osc.start(now);
+    osc.stop(now + 0.08);
+  },
+
+  // Enemy death sound
+  enemyDeath: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Descending sweep for death
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    osc.start(now);
+    osc.stop(now + 0.3);
+  },
+
+  // Level complete sound (ascending tones)
+  levelComplete: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    // First note
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    
+    osc1.frequency.setValueAtTime(523, now); // C5
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    osc1.start(now);
+    osc1.stop(now + 0.2);
+    
+    // Second note
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    
+    osc2.frequency.setValueAtTime(659, now + 0.15); // E5
+    gain2.gain.setValueAtTime(0.3, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.35);
+    
+    // Third note
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.connect(gain3);
+    gain3.connect(ctx.destination);
+    
+    osc3.frequency.setValueAtTime(784, now + 0.3); // G5
+    gain3.gain.setValueAtTime(0.3, now + 0.3);
+    gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+    osc3.start(now + 0.3);
+    osc3.stop(now + 0.6);
+  },
+
+  // Game over sound (descending minor tones)
+  gameOver: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    // Low descending tone
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.5);
+    
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    
+    osc.start(now);
+    osc.stop(now + 0.5);
+  },
+
+  // Footstep sound (subtle low thud)
+  footstep: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+    
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    
+    osc.start(now);
+    osc.stop(now + 0.1);
+  },
+
+  // Potion selection sound
+  potionSelect: () => {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Magical shimmer
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(500, now + 0.2);
+    
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+};
 
 // ─── POTION SYSTEM STATE ─────────────────────────────────────────────────────
 let activePotion = null; // 'invert_move', 'invert_vertical', or 'swap_spell'
@@ -26,6 +232,165 @@ const POTION_TYPES = [
   { id: 'invert_vertical', name: 'Potion of Vertigo', desc: 'Swaps Up & Down keys' },
   { id: 'swap_spell', name: 'Potion of Chaos', desc: 'F fires bolt, Space is Jump' } 
 ];
+
+// ─── HEALTH SYSTEM ────────────────────────────────────────────────────────────
+let playerHealth = 5;
+const MAX_HEALTH = 5;
+let lastDamageTime = 0;
+const DAMAGE_COOLDOWN = 0.5; // Prevent rapid damage hits (in seconds)
+
+// Create damage sound effect using Web Audio API
+function createDamageSound() {
+  SFX.damage();
+}
+
+// Create health bar UI
+function initHealthBar() {
+  const healthBarContainer = document.createElement('div');
+  healthBarContainer.id = 'health-bar-container';
+  healthBarContainer.style.position = 'fixed';
+  healthBarContainer.style.top = '100px';
+  healthBarContainer.style.left = '20px';
+  healthBarContainer.style.zIndex = '100';
+  healthBarContainer.style.fontFamily = "'Crimson Pro', serif";
+  
+  const healthLabel = document.createElement('div');
+  healthLabel.style.color = '#ffaa00';
+  healthLabel.style.fontSize = '1.2rem';
+  healthLabel.style.marginBottom = '8px';
+  healthLabel.style.textShadow = '0 0 10px rgba(255, 170, 0, 0.6)';
+  healthLabel.style.letterSpacing = '0.1em';
+  healthLabel.textContent = 'HEALTH';
+  
+  const healthBarsDiv = document.createElement('div');
+  healthBarsDiv.id = 'health-bars';
+  healthBarsDiv.style.display = 'flex';
+  healthBarsDiv.style.gap = '6px';
+  
+  // Create 5 health bar units
+  for (let i = 0; i < MAX_HEALTH; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'health-unit';
+    bar.style.width = '24px';
+    bar.style.height = '24px';
+    bar.style.backgroundColor = '#00ff00';
+    bar.style.border = '2px solid #00cc00';
+    bar.style.boxShadow = '0 0 8px rgba(0, 255, 0, 0.6), inset 0 0 4px rgba(0, 255, 0, 0.3)';
+    bar.style.borderRadius = '3px';
+    bar.style.transition = 'all 0.3s ease';
+    healthBarsDiv.appendChild(bar);
+  }
+  
+  healthBarContainer.appendChild(healthLabel);
+  healthBarContainer.appendChild(healthBarsDiv);
+  document.body.appendChild(healthBarContainer);
+}
+
+// Update health bar display
+function updateHealthBarDisplay() {
+  const healthBars = document.querySelectorAll('.health-unit');
+  healthBars.forEach((bar, index) => {
+    if (index < playerHealth) {
+      // Active health unit - green and glowing
+      bar.style.backgroundColor = '#00ff00';
+      bar.style.boxShadow = '0 0 8px rgba(0, 255, 0, 0.6), inset 0 0 4px rgba(0, 255, 0, 0.3)';
+    } else {
+      // Depleted health unit - dark and faded
+      bar.style.backgroundColor = '#1a1a1a';
+      bar.style.boxShadow = '0 0 4px rgba(100, 100, 100, 0.3), inset 0 0 2px rgba(0, 0, 0, 0.5)';
+    }
+  });
+}
+
+// Take damage from enemy collision
+function takeDamage() {
+  const now = Date.now() / 1000; // Convert to seconds
+  
+  // Cooldown check to prevent rapid damage
+  if (now - lastDamageTime < DAMAGE_COOLDOWN) {
+    return;
+  }
+  
+  lastDamageTime = now;
+  
+  if (playerHealth > 0) {
+    playerHealth--;
+    createDamageSound();
+    updateHealthBarDisplay();
+    
+    // Flash red effect on screen when damaged
+    const flash = document.createElement('div');
+    flash.style.position = 'fixed';
+    flash.style.top = '0';
+    flash.style.left = '0';
+    flash.style.width = '100%';
+    flash.style.height = '100%';
+    flash.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+    flash.style.pointerEvents = 'none';
+    flash.style.zIndex = '99';
+    document.body.appendChild(flash);
+    
+    setTimeout(() => flash.remove(), 200);
+    
+    // Game over if health reaches 0
+    if (playerHealth <= 0) {
+      gameOver();
+    }
+  }
+}
+
+// Game over function
+function gameOver() {
+  cancelAnimationFrame(animFrameId);
+  clearInterval(timerInterval);
+  
+  // Play game over sound
+  SFX.gameOver();
+  
+  const gameOverContainer = document.createElement('div');
+  gameOverContainer.style.position = 'fixed';
+  gameOverContainer.style.top = '50%';
+  gameOverContainer.style.left = '50%';
+  gameOverContainer.style.transform = 'translate(-50%, -50%)';
+  gameOverContainer.style.textAlign = 'center';
+  gameOverContainer.style.zIndex = '200';
+  gameOverContainer.style.fontFamily = "'Crimson Pro', serif";
+  
+  const gameOverText = document.createElement('div');
+  gameOverText.style.fontSize = '4rem';
+  gameOverText.style.color = '#ff0000';
+  gameOverText.style.textShadow = '0 0 30px rgba(255, 0, 0, 0.8)';
+  gameOverText.style.marginBottom = '2rem';
+  gameOverText.style.letterSpacing = '0.1em';
+  gameOverText.textContent = '✦ YOU DIED ✦';
+  
+  const depthText = document.createElement('div');
+  depthText.style.fontSize = '1.5rem';
+  depthText.style.color = '#ffaa00';
+  depthText.style.textShadow = '0 0 15px rgba(255, 170, 0, 0.6)';
+  depthText.style.marginBottom = '2rem';
+  depthText.textContent = `Reached Depth: Level ${levelsCompleted}`;
+  
+  const restartBtn = document.createElement('button');
+  restartBtn.textContent = 'Return to Surface';
+  restartBtn.style.padding = '12px 30px';
+  restartBtn.style.fontSize = '1.2rem';
+  restartBtn.style.backgroundColor = '#1a1060';
+  restartBtn.style.color = '#00ff88';
+  restartBtn.style.border = '2px solid #00ff88';
+  restartBtn.style.cursor = 'pointer';
+  restartBtn.style.borderRadius = '5px';
+  restartBtn.style.textShadow = '0 0 10px rgba(0, 255, 136, 0.5)';
+  restartBtn.addEventListener('click', () => {
+    gameOverContainer.remove();
+    endRun();
+  });
+  
+  gameOverContainer.appendChild(gameOverText);
+  gameOverContainer.appendChild(depthText);
+  gameOverContainer.appendChild(restartBtn);
+  document.body.appendChild(gameOverContainer);
+}
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 nameInput.addEventListener('input', () => {
@@ -338,8 +703,8 @@ function buildScene() {
   armL.position.set(-0.35, 1.1, 0);
   armL.rotation.z = 0.45;
   armL.castShadow = true;
-  playerGroup.add(armL);
   _castArm = armL;
+  playerGroup.add(armL);
 
   // Casting orb on left hand
   const orbMat = new THREE.MeshLambertMaterial({
@@ -491,13 +856,13 @@ function updateEnemies(dt, playerPos) {
     enemy.healthBar.material.color.setHex(healthColor);
 
     if (distToPlayer < enemy.aggroRange) {
-      // Chase player
-      if (distToPlayer > enemy.attackRange) {
-        toPlayer.normalize();
-        enemy.position.addScaledVector(toPlayer, enemy.speed * dt);
-      } else {
-        // Attack player if in range (we'll keep this simple for now)
-        // Just face the player
+      // Chase player - ALWAYS move towards them
+      toPlayer.normalize();
+      enemy.position.addScaledVector(toPlayer, enemy.speed * dt);
+      
+      // Check collision with player for damage (at close range)
+      if (distToPlayer < 0.8) {
+        takeDamage();
       }
     } else {
       // Wander randomly
@@ -567,6 +932,9 @@ function fireMagicBolt() {
   if (_boltCooldown > 0 || !playerGroup) return;
   _boltCooldown = BOLT_COOLDOWN;
   spellsFired++;
+  
+  // Play spell cast sound
+  SFX.castSpell();
 
   const armPos = _castArm.getWorldPosition(new THREE.Vector3());
   const dir = new THREE.Vector3(0, 0, -1);
@@ -634,6 +1002,8 @@ function checkBoltCollisions() {
         setTimeout(() => gameScr.classList.remove('shake'), 150);
 
         enemy.health -= 1;
+        // Play hit sound
+        SFX.enemyHit();
         spawnBoltBurst(bolt.position.x, bolt.position.y, bolt.position.z);
         removeBolt(i);
         
@@ -641,6 +1011,8 @@ function checkBoltCollisions() {
         AUDIO.enemyHit();
         
         if (enemy.health <= 0) {
+          // Play death sound
+          SFX.enemyDeath();
           killEnemy(j);
         }
         break; 
@@ -693,6 +1065,8 @@ function removeBolt(boltIndex) {
 }
 
 // ─── GAME LOOP ────────────────────────────────────────────────────────────────
+
+let lastFootstepTime = 0;
 
 function gameLoop(ts) {
   animFrameId = requestAnimationFrame(gameLoop);
@@ -750,6 +1124,12 @@ function gameLoop(ts) {
     
     steps++;
     distanceTravelled += movement.length();
+    
+    // Play footstep sounds occasionally during movement
+    if (ts - lastFootstepTime > 300) { // Every 300ms
+      SFX.footstep();
+      lastFootstepTime = ts;
+    }
   }
 
   const isMoving = input.length() > 0;
@@ -922,6 +1302,8 @@ function showPotionSelection() {
     
     btn.onclick = () => {
       activePotion = potion.id;
+      // Play potion select sound
+      SFX.potionSelect();
       overlay.remove();
       generateLevel(); 
     };
@@ -951,8 +1333,8 @@ function completeLevel() {
   _levelState.levelComplete = true;
   levelsCompleted++;
   
-  // 🔊 Play level complete sound
-  AUDIO.levelComplete();
+  // Play level complete sound
+  SFX.levelComplete();
 
   // Elegant gradient flash
   const flash = document.createElement('div');
@@ -1068,7 +1450,7 @@ function spawnBoltBurst(x, y, z) {
   }
 }
 
-// ─── TIMER ────────────────────────────────────────────────────────────────────
+// ─── TIMER ────────────────────────────────────────────────────────
 function formatTime(ms) {
   const s = Math.floor(ms / 1000), m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -1080,7 +1462,7 @@ function startTimer() {
   timerInterval = setInterval(() => { el.textContent = formatTime(Date.now() - startTime); }, 1000);
 }
 
-// ─── RESIZE HANDLER ───────────────────────────────────────────────────────────
+// ─── RESIZE HANDLER ───────────────────────────────────────────────
 function onResize() {
   const canvas = document.getElementById('three-canvas');
   const w = canvas.offsetWidth;
@@ -1090,12 +1472,19 @@ function onResize() {
   renderer.setSize(w, h);
 }
 
-// ─── START ────────────────────────────────────────────────────────────────────
+// ─── START ────────────────────────────────────────────────────────
 function startGame() {
   playerName = nameInput.value.trim() || 'Wanderer';
   AUDIO.menuClick(); // 🔊 Play menu click sound
   loginScr.style.display = 'none';
   gameScr.style.display  = 'block';
+  
+  // Reset health for new game
+  playerHealth = MAX_HEALTH;
+  lastDamageTime = 0;
+  initHealthBar();
+  updateHealthBarDisplay();
+  
   buildScene();
   startTimer();
   lastTime = 0;
@@ -1104,7 +1493,7 @@ function startGame() {
   document.getElementById('end-btn').addEventListener('click', endRun);
 }
 
-// ─── END ──────────────────────────────────────────────────────────────────────
+// ─── END ──────────────────────────────────────────────────────────
 function endRun() {
   cancelAnimationFrame(animFrameId);
   clearInterval(timerInterval);
@@ -1131,7 +1520,7 @@ function endRun() {
   statsScr.style.display = 'flex';
 }
 
-// ─── PLAY AGAIN ───────────────────────────────────────────────────────────────
+// ─── PLAY AGAIN ───────────────────────────────────────────────────
 document.getElementById('play-again-btn').addEventListener('click', () => {
   steps = 0; 
   distanceTravelled = 0; 
@@ -1139,6 +1528,8 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
   levelsCompleted = 0; 
   currentLevel = 0;
   enemiesKilledTotal = 0;
+  playerHealth = MAX_HEALTH;
+  lastDamageTime = 0;
   _bolts.length = 0; 
   _burstParticles.length = 0;
   _boltCooldown = 0; 
@@ -1160,6 +1551,10 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
   enterBtn.disabled = true;
   document.getElementById('timer-display').textContent    = '00:00';
   document.getElementById('controls-hint').style.opacity = '1';
+  
+  // Remove health bar
+  const healthBar = document.getElementById('health-bar-container');
+  if (healthBar) healthBar.remove();
 
   DungeonWorld.dispose();
   if (renderer) { renderer.dispose(); renderer = null; }
