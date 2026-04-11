@@ -411,6 +411,104 @@ let currentLevel      = 0;
 let levelsCompleted   = 0;
 let enemiesKilledTotal= 0;
 
+// ─── AUDIO SYSTEM ─────────────────────────────────────────────────────────────
+const AUDIO = {
+  enabled: true,
+  masterVolume: 0.7,
+  
+  // Ambient sounds (using Web Audio API sine wave synthesis)
+  ambient: null,
+  
+  // Sound effects database
+  sfx: {},
+  
+  // Initialize Web Audio API
+  audioContext: null,
+  initialized: false,
+  
+  init() {
+    if (this.initialized) return;
+    try {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+      console.log('🔊 Audio system initialized');
+    } catch (e) {
+      console.warn('⚠️ Web Audio API not supported:', e);
+      this.enabled = false;
+    }
+  },
+  
+  // Play a simple beep sound
+  beep(frequency = 800, duration = 0.1, type = 'sine') {
+    if (!this.enabled || !this.initialized) return;
+    try {
+      const now = this.audioContext.currentTime;
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      
+      osc.connect(gain);
+      gain.connect(this.audioContext.destination);
+      
+      osc.type = type;
+      osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.3 * this.masterVolume, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+      
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {
+      console.warn('Audio error:', e);
+    }
+  },
+  
+  // Spell cast sound
+  castSpell() {
+    this.beep(1200, 0.15, 'sine');
+    setTimeout(() => this.beep(1600, 0.1, 'sine'), 75);
+  },
+  
+  // Jump sound
+  jump() {
+    this.beep(600, 0.12, 'triangle');
+  },
+  
+  // Land sound
+  land() {
+    this.beep(400, 0.08, 'sine');
+  },
+  
+  // Enemy hit sound
+  enemyHit() {
+    this.beep(200, 0.05, 'sine');
+    setTimeout(() => this.beep(150, 0.05, 'sine'), 50);
+  },
+  
+  // Enemy death sound
+  enemyDeath() {
+    this.beep(300, 0.1, 'sine');
+    setTimeout(() => this.beep(200, 0.15, 'sine'), 100);
+    setTimeout(() => this.beep(100, 0.2, 'sine'), 200);
+  },
+  
+  // Level complete sound
+  levelComplete() {
+    this.beep(800, 0.2, 'sine');
+    setTimeout(() => this.beep(1000, 0.2, 'sine'), 220);
+    setTimeout(() => this.beep(1200, 0.3, 'sine'), 440);
+  },
+  
+  // Potion drink sound
+  drinkPotion() {
+    this.beep(1400, 0.08, 'sine');
+    setTimeout(() => this.beep(1600, 0.12, 'sine'), 100);
+  },
+  
+  // Menu click sound
+  menuClick() {
+    this.beep(700, 0.05, 'sine');
+  }
+};
+
 // ─── LEVEL CONFIGURATION ──────────────────────────────────────────────────────
 const LEVEL_CONFIG = {
   collection: {
@@ -450,28 +548,39 @@ const PROGRESSION = {
 
 // ─── INPUT ────────────────────────────────────────────────────────────────────
 const keys = {};
-window.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (e.code === 'Space') e.preventDefault();
-  if (e.code === 'KeyF' && scene) fireMagicBolt();
-});
-window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Volatile key bindings - can swap based on potion
+let JUMP_KEY = 'Space';
+let SPELL_KEY = 'KeyF';
+
+// Update key bindings based on potion
+function updateKeyBindings() {
+  if (activePotion === 'swap_spell') {
+    JUMP_KEY = 'KeyF';
+    SPELL_KEY = 'Space';
+  } else {
+    JUMP_KEY = 'Space';
+    SPELL_KEY = 'KeyF';
+  }
+}
 
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
 
-  // Determine which key is allowed to fire based on the potion
-  const canFireWithF = (activePotion !== 'swap_spell' && e.code === 'KeyF');
-  const canFireWithSpace = (activePotion === 'swap_spell' && e.code === 'Space');
-
-  if (canFireWithF || canFireWithSpace) {
-    if (scene) fireMagicBolt();
+  // Cast spell if this is the spell key
+  if (e.code === SPELL_KEY && scene) {
+    fireMagicBolt();
+    AUDIO.castSpell(); // 🔊 Play spell sound
   }
 
-  // Prevent browser scrolling for both possible jump keys
-  if (e.code === 'Space' || e.code === 'KeyF') {
+  // Prevent browser scrolling for jump and spell keys
+  if (e.code === JUMP_KEY || e.code === SPELL_KEY) {
     e.preventDefault();
   }
+});
+
+window.addEventListener('keyup', e => { 
+  keys[e.code] = false; 
 });
 
 // ─── THREE.JS CORE ────────────────────────────────────────────────────────────
@@ -508,6 +617,9 @@ let _playerDirection = 0; // Current facing direction
 
 function buildScene() {
   const canvas = document.getElementById('three-canvas');
+
+  // Initialize audio system
+  AUDIO.init();
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -626,9 +738,13 @@ function generateLevel() {
   
   currentLevel = levelsCompleted + 1;
   
+  // Update key bindings based on active potion
+  updateKeyBindings();
+  
   console.log("=== LEVEL", currentLevel, "STARTED ===");
   console.log("Enemy target:", settings.enemiesToKill);
   console.log("Difficulty:", settings.enemyDifficulty);
+  console.log("Key Bindings - Jump:", JUMP_KEY, "Spell:", SPELL_KEY);
   
   // Reset level state
   _levelState = {
@@ -889,7 +1005,10 @@ function checkBoltCollisions() {
         // Play hit sound
         SFX.enemyHit();
         spawnBoltBurst(bolt.position.x, bolt.position.y, bolt.position.z);
-        removeBolt(i); 
+        removeBolt(i);
+        
+        // 🔊 Play enemy hit sound
+        AUDIO.enemyHit();
         
         if (enemy.health <= 0) {
           // Play death sound
@@ -904,6 +1023,9 @@ function checkBoltCollisions() {
 function killEnemy(enemyIndex) {
   const enemy = _levelState.enemies[enemyIndex];
   if (!enemy) return;
+
+  // 🔊 Play enemy death sound
+  AUDIO.enemyDeath();
 
   // 1. Remove the mesh from the 3D scene
   scene.remove(enemy.mesh);
@@ -1011,7 +1133,7 @@ function gameLoop(ts) {
   }
 
   const isMoving = input.length() > 0;
-  DungeonWorld.update(ts, dt, playerGroup, isMoving, keys);
+  DungeonWorld.update(ts, dt, playerGroup, isMoving, keys, JUMP_KEY);
 
   // Update bolts
   for (let i = 0; i < _bolts.length; i++) {
@@ -1353,6 +1475,7 @@ function onResize() {
 // ─── START ────────────────────────────────────────────────────────
 function startGame() {
   playerName = nameInput.value.trim() || 'Wanderer';
+  AUDIO.menuClick(); // 🔊 Play menu click sound
   loginScr.style.display = 'none';
   gameScr.style.display  = 'block';
   
